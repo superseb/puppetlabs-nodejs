@@ -9,14 +9,22 @@
 # Usage:
 #
 class nodejs(
-  $dev_package = false,
-  $manage_repo = false,
-  $proxy       = '',
-  $version     = 'present'
+  $dev_package    = false,
+  $manage_repo    = false,
+  $proxy          = '',
+  $npmrc_settings = {},
+  $globalpackages = [],
+  $userpackages   = {},
+  $version        = 'present'
 ) inherits nodejs::params {
   #input validation
   validate_bool($dev_package)
   validate_bool($manage_repo)
+
+  validate_array($globalpackages)
+
+  validate_hash($npmrc_settings)
+  validate_hash($userpackages)
 
   case $::operatingsystem {
     'Debian': {
@@ -123,9 +131,9 @@ class nodejs(
 
   if $proxy {
     exec { 'npm_proxy':
-      command => "npm config set proxy ${proxy}",
-      path    => $::path,
-      require => Package['npm'],
+      command     => "npm config set proxy ${proxy}",
+      path        => $::path,
+      require     => Package['npm'],
     }
   }
 
@@ -136,5 +144,9 @@ class nodejs(
       require => Anchor['nodejs::repo']
     }
   }
+
+  create_resources(ini_setting, $npmrc_settings)
+
+  create_resources(package, $globalpackages, { 'ensure' => present, 'provider' => 'npm' })
 
 }
